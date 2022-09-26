@@ -3,6 +3,7 @@ import requests
 import json
 import base64
 from Crypto.Cipher import AES
+from enum import Enum
 
 # windows中文乱码使用
 # import io
@@ -18,6 +19,14 @@ req_headers = {
                 'Cookie': r'MUSIC_U=;',
                 'Referer': 'https://music.163.com/'
             }
+
+
+class ParamType(Enum):
+    Search = 0
+    Recommend = 1
+    Song = 2
+    Tracks = 3
+
 
 
 class SongInfo:
@@ -43,12 +52,13 @@ class SongInfo:
             _album = song['al']
         self.album = _album['name']
         self.picUrl = _album['picUrl']
+        self.level = song['privilege']['playMaxBrLevel']
         # self.url = get_song(str(self.id))
 
 
 def req_search(_word, index):
     req_url = 'https://music.163.com/weapi/cloudsearch/get/web?csrf_token='
-    params = get_params(_word)
+    params = get_params(_word, ParamType.Search)
     encSecKey = get_encSecKey()
     req_data = {
         'params': params,
@@ -76,7 +86,7 @@ def req_search(_word, index):
 def req_recommend():
     url = 'https://music.163.com/weapi/v2/discovery/recommend/songs?csrf_token='
     
-    params = get_params('', True)
+    params = get_params('', ParamType.Recommend)
     encSecKey = get_encSecKey()
     req_data = {
         'params': params,
@@ -84,6 +94,7 @@ def req_recommend():
     }
     resp = requests.post(url, headers=req_headers, data=req_data)
     result = resp.text
+    
     data = json.loads(result)
     code = data['code']
 
@@ -101,7 +112,7 @@ def req_recommend():
 def get_song(_id):
     url = 'https://music.163.com/weapi/song/enhance/player/url/v1?csrf_token='
     
-    params = get_params(_id, False, True)
+    params = get_params(_id, ParamType.Song)
     encSecKey = get_encSecKey()
     req_data = {
         'params': params,
@@ -109,6 +120,7 @@ def get_song(_id):
     }
     resp = requests.post(url, headers=req_headers, data=req_data)
     result = resp.text
+    
     data = json.loads(result)
     code = data['code']
     if code == 200:
@@ -117,6 +129,27 @@ def get_song(_id):
         return song
 
     return None
+
+
+def req_tracks(_id):
+    url = 'https://music.163.com/weapi/playlist/manipulate/tracks?csrf_token='
+    
+    params = get_params(_id, ParamType.Tracks, 'add')
+    encSecKey = get_encSecKey()
+    req_data = {
+        'params': params,
+        'encSecKey': encSecKey
+    }
+    resp = requests.post(url, headers=req_headers, data=req_data)
+    result = resp.text
+    
+    data = json.loads(result)
+    code = data['code']
+    if code == 200:
+        return '添加成功!'
+    elif 'message' in data:
+        return data['message']
+    return '添加失败'
 
 
 def AES_encrypt(text, key, iv):
@@ -137,17 +170,20 @@ def get_encSecKey():
     return encSecKey
 
 
-def get_params(_word, recommend=False, song=False):  # 获取params 参数的函数
+def get_params(_word, paramType, tracks_param='add'):  # 获取params 参数的函数
     iv = "0102030405060708"
     first_key = forth_param
     second_key = 16 * 'F'
     _param = ''
-    if recommend:
+    if paramType == ParamType.Recommend:
         _param = get_recommend_param()
-    elif song:
+    elif paramType == ParamType.Song:
         _param = get_song_param(_word)
-    else:
+    elif paramType == ParamType.Search:
         _param = get_search_param(_word)
+    elif paramType == ParamType.Tracks:
+        _param = get_track_param(_word, tracks_param)
+
     h_encText = AES_encrypt(_param, first_key, iv)
     h_encText = AES_encrypt(h_encText, second_key, iv)
     return h_encText
@@ -164,7 +200,12 @@ def get_recommend_param():
 
 
 def get_song_param(_id):
-    _param = r'{"ids":"[' + _id + ']","level":"lossless","encodeType":"aac","csrf_token":""}'   # level: standard higher lossless
+    _param = r'{"ids":"[' + _id + ']","level":"hires","encodeType":"mp3","csrf_token":""}'   # level: standard higher exhigh lossless hires
+    return _param
+
+
+def get_track_param(_id, _op):
+    _param = r'{"tracks":"[object Object]","pid":"5862739","trackIds":"['+_id+']","op":"'+_op+'","csrf_token":""}'
     return _param
 
 
@@ -319,6 +360,7 @@ def echo_html(_list, _word):
                     <div class="right">\
                     <a class="play" onclick="onClick(this)" data-title="{song_index}.{song.name} - {_artists}"\
                      data-id="{song.id}" title="播放"><img class="album" src="{song.picUrl}"><img class="play-icon"></a>\
+                     \
                      </div>\
                     </div>\
                     <div class="reason inline text font10">{song.reason}</div>\
