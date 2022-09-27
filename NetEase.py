@@ -24,7 +24,6 @@ class ParamType(Enum):
     Tracks = 3
 
 
-
 class SongInfo:
     def __init__(self, song):
         self.id = song['id']
@@ -100,25 +99,24 @@ def get_recommend_param():
 
 
 def get_song_param(_id):
-    _param = r'{"ids":"[' + _id + ']","level":"hires","encodeType":"mp3","csrf_token":""}'   # level: standard higher exhigh lossless hires
+    _param = r'{"ids":"[' + _id + ']","level":"hires","encodeType":"mp3","csrf_token":""}'  # level: standard higher exhigh lossless hires
     return _param
 
 
 def get_track_param(_id, _op):
-    _param = r'{"tracks":"[object Object]","pid":"5862739","trackIds":"['+_id+']","op":"'+_op+'","csrf_token":""}'
+    _param = r'{"tracks":"[object Object]","pid":"5862739","trackIds":"[' + _id + ']","op":"' + _op + '","csrf_token":""}'
     return _param
 
 
-class NetEase():
+class NetEase:
     def __init__(self, music_u):
         self.req_headers = {
-                'Cookie': r'MUSIC_U='+music_u+';',
-                'Referer': 'https://music.163.com/'
-            }
+            'Cookie': r'MUSIC_U=' + music_u + ';',
+            'Referer': 'https://music.163.com/'
+        }
 
     def get_headers(self):
         return self.req_headers
-
 
     def req_search(self, _word, index):
         req_url = 'https://music.163.com/weapi/cloudsearch/get/web?csrf_token='
@@ -146,10 +144,9 @@ class NetEase():
 
         return None
 
-
     def req_recommend(self):
         url = 'https://music.163.com/weapi/v2/discovery/recommend/songs?csrf_token='
-        
+
         params = get_params('', ParamType.Recommend)
         encSecKey = get_encSecKey()
         req_data = {
@@ -158,7 +155,7 @@ class NetEase():
         }
         resp = requests.post(url, headers=self.get_headers(), data=req_data)
         result = resp.text
-        
+
         data = json.loads(result)
         code = data['code']
 
@@ -172,10 +169,9 @@ class NetEase():
 
         return None
 
-
     def get_song(self, _id):
         url = 'https://music.163.com/weapi/song/enhance/player/url/v1?csrf_token='
-        
+
         params = get_params(_id, ParamType.Song)
         encSecKey = get_encSecKey()
         req_data = {
@@ -184,7 +180,7 @@ class NetEase():
         }
         resp = requests.post(url, headers=self.get_headers(), data=req_data)
         result = resp.text
-        
+
         data = json.loads(result)
         code = data['code']
         if code == 200:
@@ -194,10 +190,9 @@ class NetEase():
 
         return None
 
-
     def req_tracks(self, _id):
         url = 'https://music.163.com/weapi/playlist/manipulate/tracks?csrf_token='
-        
+
         params = get_params(_id, ParamType.Tracks, 'add')
         encSecKey = get_encSecKey()
         req_data = {
@@ -206,7 +201,7 @@ class NetEase():
         }
         resp = requests.post(url, headers=self.get_headers(), data=req_data)
         result = resp.text
-        
+
         data = json.loads(result)
         code = data['code']
         if code == 200:
@@ -214,7 +209,6 @@ class NetEase():
         elif 'message' in data:
             return data['message']
         return '添加失败'
-
 
     def echo_html(self, _list, _word):
         html_style = '''body{
@@ -235,12 +229,11 @@ class NetEase():
                             .append{
                                 margin:5px;
                                 display:grid;
-                                grid-template-columns: 1fr 100px;
+                                grid-template-columns: 1fr 30px 30px;
                             }
                             .content{
                                 padding:0px;
                                 margin:15px;
-                                margin-top:100px;
                                 margin-bottom:50px;
                             }
                             .item{
@@ -308,7 +301,6 @@ class NetEase():
                             }
                             .playing{
                                 color:#C10D0C;
-                                cursor: pointer;
                             }
                             .title{
                                 color:#ccc;
@@ -316,14 +308,25 @@ class NetEase():
                                 height:60px;
                                 display:flex;
                             }
-                            .bgImg{
+                            .img-table{
                                 background: url(/images/table.png) no-repeat 0 9999px;
-                            }.track{
+                            }
+                            .img-icon-all{
+                                background: url(/images/iconall.png) no-repeat 0 9999px;
+                            }
+                            .track{
                                 margin-left:10px;
                                 width:17px;
                                 height:17px;
-                                background-position:-41px -171px;
+                                background-position:-41px -173px;
                                 cursor: pointer;
+                            }
+                            .toggle-play{
+                                cursor: pointer;
+                                margin-left:10px;
+                                width:17px;
+                                height:17px;
+                                background-position:0 0;
                             }
                             .inline{
                                 display:inline;
@@ -336,13 +339,15 @@ class NetEase():
                             var music = document.getElementById("music");
                         })
                         $(window).scroll(function(){
-                            if($(window).scrollTop()>10){
+                            if($(window).scrollTop()>0){
                                 $(".top").css("position", "fixed");
                                 $(".top").css("filter", "drop-shadow(0px 1px 3px rgba(220,50,0,0.3))");
+                                $(".content").css("margin-top", "100");
                             }
                             else{
-                                $(".top").css("position", "absolute");
+                                $(".top").css("position", "relative");
                                 $(".top").css("filter", "none");
+                                $(".content").css("margin-top", "0");
                             }
                         });
                         function onClick(data){
@@ -354,7 +359,10 @@ class NetEase():
                                 music.src=data;
                                 music.play();
                                 $(".append").remove();
-                                $(".playing").append("<div class='append'><div>正在播放: "+title+"</div><div class='track bgImg' onclick='onTrack("+id+")'></div></div>");
+                                var _append = "<div class='append center'><div>正在播放: "+title+
+                                            "</div><div class='track img-table' onclick='onTrack("+id+")'></div>"+
+                                            "<div class='toggle-play img-icon-all' onclick='toggleMusic()'></div></div>"
+                                $(".playing").append(_append);
                             });
                         }
                         function toggleMusic(){
@@ -376,7 +384,7 @@ class NetEase():
                     <script src="/javascripts/jquery.min.js"></script>\
                     <title>{_word}</title><style>{html_style}</style><script>{html_script}</script></head>'
         html = html_head + f'<div class="top"><div class="title center">{_word}</div>\
-                        <div class="playing center" onclick="toggleMusic()"></div><audio id="music"></audio></div>\
+                        <div class="playing"></div><audio id="music"></audio></div>\
                         <div class="content">'
         song_index = 0
         for song in _list:
@@ -401,7 +409,6 @@ class NetEase():
                     </div>'
         print(html + '</div>')
 
-
     def echo_search(self):
         search_index = 0
         word = '二十岁的某一天'
@@ -425,7 +432,6 @@ class NetEase():
             self.echo_html(songList, word)
         else:
             print(f'未找到!')
-
 
     def echo_recommend(self):
         songList = self.req_recommend()
