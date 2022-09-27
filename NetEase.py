@@ -224,13 +224,18 @@ class NetEase():
                                 word-break: break-word;
                             }
                             .top{
-                                position:fixed;
+                                /*position:fixed;*/
                                 top:0;
                                 width:100%;
                                 height:80px;
                                 z-index:1;
                                 background-color:#333;
                                 /*filter:drop-shadow(0px 1px 3px rgba(220,50,0,0.3));*/
+                            }
+                            .append{
+                                margin:5px;
+                                display:grid;
+                                grid-template-columns: 1fr 100px;
                             }
                             .content{
                                 padding:0px;
@@ -313,6 +318,12 @@ class NetEase():
                             }
                             .bgImg{
                                 background: url(/images/table.png) no-repeat 0 9999px;
+                            }.track{
+                                margin-left:10px;
+                                width:17px;
+                                height:17px;
+                                background-position:-41px -171px;
+                                cursor: pointer;
                             }
                             .inline{
                                 display:inline;
@@ -326,9 +337,11 @@ class NetEase():
                         })
                         $(window).scroll(function(){
                             if($(window).scrollTop()>10){
+                                $(".top").css("position", "fixed");
                                 $(".top").css("filter", "drop-shadow(0px 1px 3px rgba(220,50,0,0.3))");
                             }
                             else{
+                                $(".top").css("position", "absolute");
                                 $(".top").css("filter", "none");
                             }
                         });
@@ -337,11 +350,11 @@ class NetEase():
                             var id = data.getAttribute("data-id");
                             var title = data.getAttribute("data-title");
                             $(".title").height(30);
-                            $.get("/python/music-url"+id,function(data,status){
+                            $.get("/python/music-url_"+id,function(data,status){
                                 music.src=data;
                                 music.play();
-                                var playing = document.getElementsByClassName("playing")[0];
-                                playing.innerHTML = "正在播放: "+title;
+                                $(".append").remove();
+                                $(".playing").append("<div class='append'><div>正在播放: "+title+"</div><div class='track bgImg' onclick='onTrack("+id+")'></div></div>");
                             });
                         }
                         function toggleMusic(){
@@ -351,6 +364,11 @@ class NetEase():
                             else{
                                 music.pause();
                             }
+                        }
+                        function onTrack(_id){
+                            $.get("/python/music-track_"+_id,function(data,status){
+                                alert(data);
+                            });
                         }
                     '''
         html_head = f'<head>\
@@ -390,9 +408,13 @@ class NetEase():
 
         if len(sys.argv) > 1:
             word = sys.argv[1]
-            if word.startswith('url'):
-                _id = word.split('url')[1]
+            if word.startswith('url_'):
+                _id = word.split('url_')[1]
                 print(self.get_song(_id))
+                return
+            elif word.startswith('track_'):
+                _id = word.split('track_')[1]
+                print(self.req_tracks(_id))
                 return
             elif len(sys.argv) > 2:
                 search_index = sys.argv[2]
